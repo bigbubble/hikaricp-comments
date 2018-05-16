@@ -50,7 +50,7 @@ public final class PropertyElf
       if (target == null || properties == null) {
          return;
       }
-	  //目标对象的所有方法
+      //目标对象的所有方法
       List<Method> methods = Arrays.asList(target.getClass().getMethods());
       //所有属性的键
       Enumeration<?> propertyNames = properties.propertyNames();
@@ -63,16 +63,16 @@ public final class PropertyElf
          /*
           * Properties继承HashTable
           * public String getProperty(String key) {
-		  *     Object oval = super.get(key); //HashTable.get(Object key)
-		  *     String sval = (oval instanceof String) ? (String)oval : null;
-		  *     return ((sval == null) && (defaults != null)) ? defaults.getProperty(key) : sval;
-		  * }
-		  * String getProperty(String key)方法中，如果HashTable中存储的值不是String类型会返回null，使用get(Objeject key)方法获取其他类型的值(使用Properties.put(k,v)设置的值)
+	  *     Object oval = super.get(key); //HashTable.get(Object key)
+	  *     String sval = (oval instanceof String) ? (String)oval : null;
+	  *     return ((sval == null) && (defaults != null)) ? defaults.getProperty(key) : sval;
+	  * }
+	  * String getProperty(String key)方法中，如果HashTable中存储的值不是String类型会返回null，使用get(Objeject key)方法获取其他类型的值(使用Properties.put(k,v)设置的值)
           */
          if (propValue == null) {
             propValue = properties.get(key);
          }
-		 //如果目标对象是HikariConfig实例并且键依"dataSource."开头，键去掉"dataSource.",使用HikariConfig的方法设置数据源属性
+	 //如果目标对象是HikariConfig实例并且键依"dataSource."开头，键去掉"dataSource.",使用HikariConfig的方法设置数据源属性
          if (target instanceof HikariConfig && propName.startsWith("dataSource.")) {
             ((HikariConfig) target).addDataSourceProperty(propName.substring("dataSource.".length()), propValue);
          }
@@ -100,7 +100,7 @@ public final class PropertyElf
          String name = method.getName();
          //条件：参数个数：0，匹配正则 (get|is)[A-Z].+
          if (method.getParameterTypes().length == 0 && matcher.reset(name).matches()) {
-         	//去掉get 或 is
+            //去掉get 或 is
             name = name.replaceFirst("(get|is)", "");
             try {
                //属性的set方法存在
@@ -134,7 +134,7 @@ public final class PropertyElf
       }
       catch (Exception e) {
          try {
-         	//如果get方法没有，拼接is方法，用反射方法调用
+            //如果get方法没有，拼接is方法，用反射方法调用
             String capitalized = "is" + propName.substring(0, 1).toUpperCase() + propName.substring(1);
             Method method = target.getClass().getMethod(capitalized);
             return method.invoke(target);
