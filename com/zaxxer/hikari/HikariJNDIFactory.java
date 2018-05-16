@@ -36,6 +36,8 @@ import com.zaxxer.hikari.util.PropertyElf;
  * A JNDI factory that produces HikariDataSource instances.
  *
  * @author Brett Wooldridge
+ * 
+ * 生成HikariDataSource实例的JNDI工厂类
  */
 public class HikariJNDIFactory implements ObjectFactory
 {
