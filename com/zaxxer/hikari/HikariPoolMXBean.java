@@ -23,7 +23,7 @@ package com.zaxxer.hikari;
  */
 public interface HikariPoolMXBean 
 {
-   //获取空闲的连接数
+   //获取空闲的连接数.
    int getIdleConnections();
    //获取活动的连接数
    int getActiveConnections();
