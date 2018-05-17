@@ -31,6 +31,8 @@ import java.util.concurrent.TimeUnit;
  * calculations.
  *
  * @author Brett Wooldridge
+ * 
+ * 一个粒度无关的当前时间和经过时间计算的时钟接口（具体实现Mac os 毫秒，其他 毫微秒）
  */
 public interface ClockSource
 {
@@ -40,6 +42,7 @@ public interface ClockSource
     * Get the current time-stamp (resolution is opaque).
     *
     * @return the current time-stamp
+    * 当前时间戳
     */
    long currentTime();
 
@@ -49,6 +52,7 @@ public interface ClockSource
     *
     * @param time an opaque time-stamp returned by an instance of this class
     * @return the time-stamp in milliseconds
+    * 返回当前时间的毫秒值
     */
    long toMillis(long time);
 
@@ -58,6 +62,7 @@ public interface ClockSource
     *
     * @param time an opaque time-stamp returned by an instance of this class
     * @return the time-stamp in nanoseconds
+    * 返回当前时间的毫微秒值
     */
    long toNanos(long time);
 
@@ -67,6 +72,8 @@ public interface ClockSource
     *
     * @param startTime an opaque time-stamp returned by an instance of this class
     * @return the elapsed time between startTime and now in milliseconds
+    *
+    * 返回当前时间距离开始时间的毫秒值
     */
    long elapsedMillis(long startTime);
 
@@ -77,6 +84,8 @@ public interface ClockSource
     * @param startTime an opaque time-stamp returned by an instance of this class
     * @param endTime an opaque time-stamp returned by an instance of this class
     * @return the elapsed time between startTime and endTime in milliseconds
+    * 
+    * 返回结束时间距离开始时间的毫秒值
     */
    long elapsedMillis(long startTime, long endTime);
 
@@ -86,6 +95,8 @@ public interface ClockSource
     *
     * @param startTime an opaque time-stamp returned by an instance of this class
     * @return the elapsed time between startTime and now in milliseconds
+    * 
+    * 返回当前时间距离开始时间的毫微秒值
     */
    long elapsedNanos(long startTime);
 
@@ -96,6 +107,8 @@ public interface ClockSource
     * @param startTime an opaque time-stamp returned by an instance of this class
     * @param endTime an opaque time-stamp returned by an instance of this class
     * @return the elapsed time between startTime and endTime in nanoseconds
+    *
+    * 返回结束时间距离开始时间的毫微秒值
     */
    long elapsedNanos(long startTime, long endTime);
 
@@ -105,12 +118,15 @@ public interface ClockSource
     * @param time an opaque time-stamp
     * @param millis milliseconds to add
     * @return a new opaque time-stamp
+    * 时间值+toNano(毫秒值)
     */
    long plusMillis(long time, long millis);
 
    /**
     * Get the TimeUnit the ClockSource is denominated in.
     * @return
+    * 
+    * 获取时钟单元的时钟单位
     */
    TimeUnit getSourceTimeUnit();
 
@@ -120,6 +136,8 @@ public interface ClockSource
     * @param startTime an opaque time-stamp
     * @param endTime an opaque time-stamp
     * @return a string representation of the elapsed time interval
+    *
+    * 用合适度量的表示经过时间的字符串。（经过时间的“天，时，分，秒...”形式）
     */
    String elapsedDisplayString(long startTime, long endTime);
 
@@ -129,6 +147,7 @@ public interface ClockSource
 
    /**
     * Factory class used to create a platform-specific ClockSource.
+    * 提供特定平台的实例，Mac OS 毫秒，其他 毫微秒
     */
    class Factory
    {
@@ -142,7 +161,7 @@ public interface ClockSource
          return new NanosecondClockSource();
       }
    }
-
+   //提供粒度为毫秒的ClockSource
    final class MillisecondClockSource extends NanosecondClockSource
    {
       /** {@inheritDoc} */
@@ -208,7 +227,7 @@ public interface ClockSource
          return MILLISECONDS;
       }
    }
-
+   //提供粒度为毫微秒的ClockSource
    class NanosecondClockSource implements ClockSource
    {
       /** {@inheritDoc} */
