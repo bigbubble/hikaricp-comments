@@ -35,12 +35,14 @@ import com.zaxxer.hikari.pool.HikariPool;
  * The HikariCP pooled DataSource.
  *
  * @author Brett Wooldridge
+ *
+ * DataSource
  */
 public class HikariDataSource extends HikariConfig implements DataSource, Closeable
 {
    private static final Logger LOGGER = LoggerFactory.getLogger(HikariDataSource.class);
 
-   private final AtomicBoolean isShutdown = new AtomicBoolean();
+   private final AtomicBoolean isShutdown = new AtomicBoolean();//是否关闭
 
    private final HikariPool fastPathPool;
    private volatile HikariPool pool;
@@ -50,6 +52,8 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
     * this constructor vs. {@link #HikariDataSource(HikariConfig)} will
     * result in {@link #getConnection()} performance that is slightly lower
     * due to lazy initialization checks.
+    *
+    * 使用此构造器，将在调用getConnection时检查配置参数和初始化连接池（懒加载，spring中使用这个）
     */
    public HikariDataSource()
    {
@@ -75,7 +79,7 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
    @Override
    public Connection getConnection() throws SQLException
    {
-      if (isClosed()) {
+      if (isClosed()) { //isShutDown == True
          throw new SQLException("HikariDataSource " + this + " has been closed.");
       }
 
@@ -84,6 +88,8 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
       }
 
       // See http://en.wikipedia.org/wiki/Double-checked_locking#Usage_in_Java
+      //双锁检测，pool没有初始化时，生成单例pool,这段代码加入result的含义是在pool已经初始化的情况下，
+      //保证对volatile pool变量只访问一次，因为返回的是result而不是pool，所以能获得25%的性能提升。
       HikariPool result = pool;
       if (result == null) {
          synchronized (this) {
@@ -256,6 +262,8 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
     * currently in use.  If the connection has not been closed, the eviction is immediate.
     *
     * @param connection the connection to evict from the pool
+    *
+    * 从连接池中移除连接，如果连接已经关闭（返还到连接池中），这导致“soft”移除（只标记为已移除，不执行具体关闭操作）；如果这个连接正在被使用，它将会在将来的某个时间被移除。如果连接没有关闭，将会立即移除
     */
    public void evictConnection(Connection connection)
    {
@@ -268,6 +276,8 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
    /**
     * Suspend allocation of connections from the pool.  All callers to <code>getConnection()</code>
     * will block indefinitely until <code>resumePool()</code> is called.
+    * 
+    * 中止从连接池中分配连接，所有调用getConnection()方法会被阻塞，知道resumePool()方法被调用
     */
    public void suspendPool()
    {
@@ -279,6 +289,7 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
 
    /**
     * Resume allocation of connections from the pool.
+    * 恢复连接池分配连接
     */
    public void resumePool()
    {
@@ -290,6 +301,7 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
 
    /**
     * Shutdown the DataSource and its associated pool.
+    * 关闭数据源和与它绑定的连接池
     */
    @Override
    public void close()

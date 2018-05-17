@@ -20,6 +20,8 @@ package com.zaxxer.hikari;
  * The javax.management MBean for a Hikari pool configuration.
  *
  * @author Brett Wooldridge
+ *
+ * ConfigMXBean
  */
 public interface HikariConfigMXBean
 {
@@ -29,6 +31,9 @@ public interface HikariConfigMXBean
     * {@link javax.sql.DataSource#getConnection()}.
     *
     * @return the connection timeout in milliseconds
+    * 
+    * 获取一个客户端从连接池获取一个数据库连接的最大等待时间（毫秒）。
+    * DataSource#getConnection()操作时，如果超过这个时间没有获得数据库连接，会抛出一个SQLException
     */
    long getConnectionTimeout();
 
@@ -38,6 +43,8 @@ public interface HikariConfigMXBean
     * {@link javax.sql.DataSource#getConnection()}.
     *
     * @param connectionTimeoutMs the connection timeout in milliseconds
+    * 设置一个客户端从连接池获取一个数据库连接的最大等待时间（毫秒）。
+    * DataSource#getConnection()操作时，如果超过这个时间没有获得数据库连接，会抛出一个SQLException
     */
    void setConnectionTimeout(long connectionTimeoutMs);
 
@@ -46,6 +53,8 @@ public interface HikariConfigMXBean
     * alive.
     *
     * @return the validation timeout in milliseconds
+    *
+    * 获取 连接池验证一个连接是存活状态的最大等待时间
     */
    long getValidationTimeout();
 
@@ -54,6 +63,8 @@ public interface HikariConfigMXBean
     * alive.
     *
     * @param validationTimeoutMs the validation timeout in milliseconds
+    *
+    * 设置 连接池验证一个连接是存活状态的最大等待时间
     */
    void setValidationTimeout(long validationTimeoutMs);
 
@@ -64,6 +75,11 @@ public interface HikariConfigMXBean
     * A value of 0 means that idle connections are never removed from the pool.
     *
     * @return the idle timeout in milliseconds
+    *
+    * 一个连接在连接池中最大空闲时间。
+    * 无论连接是否是因为超过闲置时间而断开连接，都会受到最大+30s,平均15s的影响
+    * 在这个值之前，连接不会因为空闲而弃用
+    * 0表示空闲的连接永远不会从连接池中移除
     */
    long getIdleTimeout();
 
@@ -74,6 +90,8 @@ public interface HikariConfigMXBean
     * A value of 0 means that idle connections are never removed from the pool.
     *
     * @param idleTimeoutMs the idle timeout in milliseconds
+    * 
+    * 设置一个连接在连接池中最大空闲时间
     */
    void setIdleTimeout(long idleTimeoutMs);
 
@@ -82,6 +100,9 @@ public interface HikariConfigMXBean
     * logged indicating a possible connection leak. A value of 0 means leak detection is disabled.
     *
     * @return the connection leak detection threshold in milliseconds
+    * 
+    * 在有记录表明可能有连接溢出之前，连接可以退出池的时间
+    * 0表示禁用连接溢出检测
     */
    long getLeakDetectionThreshold();
 
@@ -90,6 +111,7 @@ public interface HikariConfigMXBean
     * logged indicating a possible connection leak. A value of 0 means leak detection is disabled.
     *
     * @param leakDetectionThresholdMs the connection leak detection threshold in milliseconds
+    * 设置 在有记录表明可能有连接溢出之前，连接可以退出池的时间
     */
    void setLeakDetectionThreshold(long leakDetectionThresholdMs);
 
@@ -99,6 +121,8 @@ public interface HikariConfigMXBean
     * retired, only when it is idle will it be removed.
     *
     * @return the maximum connection lifetime in milliseconds
+    *
+    * 连接在连接池中存在的最长时间。如果一个连接达到了超时时间，尽管它最近被使用过，依然会被移除。如果一个连接正在被使用，不会被移除，当它空闲时才会被移除
     */
    long getMaxLifetime();
 
@@ -108,6 +132,7 @@ public interface HikariConfigMXBean
     * retired, only when it is idle will it be removed.
     *
     * @param maxLifetimeMs the maximum connection lifetime in milliseconds
+    * 设置 连接在连接池中存在的最长时间
     */
    void setMaxLifetime(long maxLifetimeMs);
 
@@ -120,6 +145,7 @@ public interface HikariConfigMXBean
     * block for up to connectionTimeout milliseconds before timing out.
     *
     * @return the minimum number of connections in the pool
+    * 源码注释错误 ？
     */
    int getMinimumIdle();
 
@@ -129,6 +155,8 @@ public interface HikariConfigMXBean
     * make a best effort to restore them quickly and efficiently.
     *
     * @param minIdle the minimum number of idle connections in the pool to maintain
+    *
+    * 设置 连接池最小空闲连接数，如果连接池中空闲连接小于这个值，小于MaxPoolSize，连接池会尽可能的高效快速的创建这个连接
     */
    void setMinimumIdle(int minIdle);
 
@@ -137,6 +165,8 @@ public interface HikariConfigMXBean
     * including both idle and in-use connections. 
     *
     * @return the maximum number of connections in the pool
+    * 
+    * 连接池最大连接数，包括空闲和使用的连接
     */
    int getMaximumPoolSize();
 
@@ -149,6 +179,8 @@ public interface HikariConfigMXBean
     * block for up to connectionTimeout milliseconds before timing out.
     *
     * @param maxPoolSize the maximum number of connections in the pool
+    * 设置 连接池最大连接数.基本上，这个值将决定到数据库后端的实际连接的最大数量。
+    * 当连接池中连接数量达到了这个值，并且没有空闲的连接可供使用，getConnect()在超时之前会阻塞
     */
    void setMaximumPoolSize(int maxPoolSize);
 
@@ -158,6 +190,8 @@ public interface HikariConfigMXBean
     * connections.
     *
     * @param password the database password
+    *
+    * 运行时更改数据库连接密码，只对新DataSource-based连接有效，对Driver-class或JDBC-based连接无效
     */
    void setPassword(String password);
 
@@ -167,6 +201,8 @@ public interface HikariConfigMXBean
     * connections.
     *
     * @param username the database username
+    *
+    * 运行时更改数据库连接用户名，只对新DataSource-based连接有效，对Driver-class或JDBC-based连接无效
     */
    void setUsername(String username);
 
@@ -175,6 +211,8 @@ public interface HikariConfigMXBean
     * The name of the connection pool.
     *
     * @return the name of the connection pool
+    *
+    * 获取连接池名称
     */
    String getPoolName();
 }

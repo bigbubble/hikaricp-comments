@@ -20,6 +20,8 @@ package com.zaxxer.hikari;
  * The javax.management MBean for a Hikari pool instance.
  *
  * @author Brett Wooldridge
+ *
+ * 连接池的MXBean
  */
 public interface HikariPoolMXBean 
 {

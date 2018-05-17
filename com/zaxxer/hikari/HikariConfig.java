@@ -44,33 +44,42 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import static com.zaxxer.hikari.util.UtilityElf.getNullIfEmpty;
-
+/**
+ * 
+ */
 public class HikariConfig implements HikariConfigMXBean
 {
    private static final Logger LOGGER = LoggerFactory.getLogger(HikariConfig.class);
 
-   private static final long CONNECTION_TIMEOUT = SECONDS.toMillis(30);
-   private static final long VALIDATION_TIMEOUT = SECONDS.toMillis(5);
-   private static final long IDLE_TIMEOUT = MINUTES.toMillis(10);
-   private static final long MAX_LIFETIME = MINUTES.toMillis(30);
+   private static final long CONNECTION_TIMEOUT = SECONDS.toMillis(30);//30秒
+   private static final long VALIDATION_TIMEOUT = SECONDS.toMillis(5);//5秒
+   private static final long IDLE_TIMEOUT = MINUTES.toMillis(10);//10分钟
+   private static final long MAX_LIFETIME = MINUTES.toMillis(30);//30分钟
 
    private static boolean unitTest;
 
-   // Properties changeable at runtime through the MBean
+   // Properties changeable at runtime through the MBean 可以在运行时通过MBean修改
    //
+   //获取一个客户端从连接池获取一个数据库连接的最大等待时间（毫秒）
    private volatile long connectionTimeout;
+   //连接池验证一个连接是存活状态的最大等待时间
    private volatile long validationTimeout;
+   //连接空闲时间
    private volatile long idleTimeout;
+   //在有记录表明可能有连接溢出之前，连接可以退出池的时间
    private volatile long leakDetectionThreshold;
+   //连接最大存活时间
    private volatile long maxLifetime;
+   //最大连接池数量
    private volatile int maxPoolSize;
+   //最小空闲数
    private volatile int minIdle;
 
-   // Properties NOT changeable at runtime
+   // Properties NOT changeable at runtime 不可以在运行时通过MBean修改
    //
    private String catalog;
-   private String connectionInitSql;
-   private String connectionTestQuery;
+   private String connectionInitSql;//连接创建后，调用的sql,如果sql执行失败则连接不加入到连接池中
+   private String connectionTestQuery;//测试连接可用性sql
    private String dataSourceClassName;
    private String dataSourceJndiName;
    private String driverClassName;
@@ -104,14 +113,14 @@ public class HikariConfig implements HikariConfigMXBean
 
       minIdle = -1;
       maxPoolSize = -1;
-      maxLifetime = MAX_LIFETIME;
-      connectionTimeout = CONNECTION_TIMEOUT;
-      validationTimeout = VALIDATION_TIMEOUT;
-      idleTimeout = IDLE_TIMEOUT;
+      maxLifetime = MAX_LIFETIME;//30min
+      connectionTimeout = CONNECTION_TIMEOUT;//30s
+      validationTimeout = VALIDATION_TIMEOUT;//5s
+      idleTimeout = IDLE_TIMEOUT;//10min
 
       isAutoCommit = true;
       isInitializationFailFast = true;
-
+      //系统属性指定配置文件
       String systemProp = System.getProperty("hikaricp.configurationFile");
       if (systemProp != null) {
          loadProperties(systemProp);
@@ -122,6 +131,7 @@ public class HikariConfig implements HikariConfigMXBean
     * Construct a HikariConfig from the specified properties object.
     *
     * @param properties the name of the property file
+    * 从特定的属性对象构建对象
     */
    public HikariConfig(Properties properties)
    {
@@ -135,6 +145,7 @@ public class HikariConfig implements HikariConfigMXBean
     * Class.getResourceAsStream(propertyFileName) will be tried.
     *
     * @param propertyFileName the name of the property file
+    * 从指定文件名构建对象，如果从文件系统获取失败，会尝试Class.getResourceAsStream(propertyFileName)
     */
    public HikariConfig(String propertyFileName)
    {
@@ -832,7 +843,7 @@ public class HikariConfig implements HikariConfigMXBean
          minIdle = maxPoolSize;
       }
    }
-
+   //记录配置日志
    private void logConfiguration()
    {
       LOGGER.debug("{} - configuration:", poolName);
@@ -858,7 +869,7 @@ public class HikariConfig implements HikariConfigMXBean
          }
       }
    }
-
+   //加载属性文件，先寻找文件系统路径，没有再在类路径下寻找
    protected void loadProperties(String propertyFileName)
    {
       final File propFile = new File(propertyFileName);
@@ -876,17 +887,18 @@ public class HikariConfig implements HikariConfigMXBean
          throw new RuntimeException("Failed to read property file", io);
       }
    }
-
+   //生成连接池名称序号
    private int generatePoolNumber()
    {
       // Pool number is global to the VM to avoid overlapping pool numbers in classloader scoped environments
+      // VM中全局唯一，以避免在类加载器作用域环境中重叠
       synchronized (System.getProperties()) {
          final int next = Integer.getInteger("com.zaxxer.hikari.pool_number", 0) + 1;
          System.setProperty("com.zaxxer.hikari.pool_number", String.valueOf(next));
          return next;
       }
    }
-
+   //拷贝非final的属性值
    public void copyState(HikariConfig other)
    {
       for (Field field : HikariConfig.class.getDeclaredFields()) {
