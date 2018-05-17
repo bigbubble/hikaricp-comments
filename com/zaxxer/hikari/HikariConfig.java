@@ -803,16 +803,18 @@ public class HikariConfig implements HikariConfigMXBean
 
    private void validateNumerics()
    {
+      //最小“最大连接存活时间不能小于30秒，否则设置为默认值
       if (maxLifetime != 0 && maxLifetime < SECONDS.toMillis(30)) {
          LOGGER.warn("{} - maxLifetime is less than 30000ms, setting to default {}ms.", poolName, MAX_LIFETIME);
          maxLifetime = MAX_LIFETIME;
       }
 
+      //空闲超时时间接近或大于“最大连接超时时间”，则忽略此参数
       if (idleTimeout + SECONDS.toMillis(1) > maxLifetime && maxLifetime > 0) {
          LOGGER.warn("{} - idleTimeout is close to or more than maxLifetime, disabling it.", poolName);
          idleTimeout = 0;
       }
-
+      //空闲超时时间不能小于10秒，否则设置为默认
       if (idleTimeout != 0 && idleTimeout < SECONDS.toMillis(10)) {
          LOGGER.warn("{} - idleTimeout is less than 10000ms, setting to default {}ms.", poolName, IDLE_TIMEOUT);
          idleTimeout = IDLE_TIMEOUT;
@@ -824,21 +826,21 @@ public class HikariConfig implements HikariConfigMXBean
             leakDetectionThreshold = 0;
          }
       }
-
+      //从连接池中获取连接的超时时间不能小于250毫秒，否则设置为默认值
       if (connectionTimeout < 250) {
          LOGGER.warn("{} - connectionTimeout is less than 250ms, setting to {}ms.", poolName, CONNECTION_TIMEOUT);
          connectionTimeout = CONNECTION_TIMEOUT;
       }
-
+      //从连接验证时间不能小于250毫秒，否则设置为默认值
       if (validationTimeout < 250) {
          LOGGER.warn("{} - validationTimeout is less than 250ms, setting to {}ms.", poolName, VALIDATION_TIMEOUT);
          validationTimeout = VALIDATION_TIMEOUT;
       }
-
+      //最大连接数如果小于1，最小空闲连接数<=0,将maxPoolSize设置为10，否则设置为minIdle
       if (maxPoolSize < 1) {
          maxPoolSize = (minIdle <= 0) ? 10 : minIdle;
       }
-
+      //最小空闲连接数<0或大于连接池中总连接数，则设置为连接池中总连接数
       if (minIdle < 0 || minIdle > maxPoolSize) {
          minIdle = maxPoolSize;
       }
