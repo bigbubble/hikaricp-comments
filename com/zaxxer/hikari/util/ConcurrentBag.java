@@ -45,7 +45,7 @@ import static com.zaxxer.hikari.util.ConcurrentBag.IConcurrentBagEntry.STATE_RES
  *
  * ConcurrentBag是一个为连接池提供专用的并发<存储结构>,它比LinkedBlockingQueue和LinkedTransferQueue有更好的性能。
  * 如果可能它使用ThreadLocal进行存储来避免多线程时使用锁，如果在ThreadLocl列表中没有可用的对象，将会去遍历一个公共的集合来获取（多个线程共有的）。
- * 一个线程ThreadLocal中Not-in-use状态的对象可以被其他线程（自己没有）使用。
+ * 一个线程ThreadLocal中Not-in-use状态的对象可以被其他线程使用（其他线程自己的ThreadLocal中没有可使用的，偷别人家对像）。
  * 这是一个"无锁"并发类实现，使用AbstractQueuedLongSynchronizer来管理跨线程信号同步
  *
  * Note that items that are "borrowed" from the bag are not actually
