@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.LongAdder;
 /**
  * A monotonically increasing long sequence.
  *
+ * 单调增加的long型序列
  * @author brettw
  */
 @SuppressWarnings("serial")
@@ -32,6 +33,7 @@ public interface Sequence
 {
    /**
     * Increments the current sequence by one.
+    * 当前序列增加1
     */
    void increment();
 
@@ -39,30 +41,34 @@ public interface Sequence
     * Get the current sequence.
     *
     * @return the current sequence.
+    * 获取当前序列值
     */
    long get();
 
    /**
     * Factory class used to create a platform-specific ClockSource.
+    * 根据不同平台创建序列器
     */
    final class Factory
    {
       public static Sequence create()
       {
          try {
+            //java.util.concurrent.atomic.LongAdder存在，系统变量"com.zaxxer.hikari.useAtomicLongSequence"不存在，或为false,使用java8 LongAdder
             if (Sequence.class.getClassLoader().loadClass("java.util.concurrent.atomic.LongAdder") != null && !Boolean.getBoolean("com.zaxxer.hikari.useAtomicLongSequence")) {
                return new Java8Sequence();
             }
          }
          catch (ClassNotFoundException e) {
             try {
+               //异常使用 com.codahale.metrics.LongAdder
                Class<?> longAdderClass = Sequence.class.getClassLoader().loadClass("com.codahale.metrics.LongAdder");
                return new DropwizardSequence(longAdderClass);
             }
             catch (Exception e2) {
             }
          }
-
+         //使用java 7 AtomicLong
          return new Java7Sequence();
       }
 

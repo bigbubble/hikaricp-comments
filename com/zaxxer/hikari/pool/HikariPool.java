@@ -62,24 +62,25 @@ import static com.zaxxer.hikari.util.UtilityElf.quietlySleep;
  * pooling behavior for HikariCP.
  *
  * @author Brett Wooldridge
+ * 连接池实现
  */
 public class HikariPool extends PoolBase implements HikariPoolMXBean, IBagStateListener
 {
    private final Logger LOGGER = LoggerFactory.getLogger(HikariPool.class);
 
-   private static final ClockSource clockSource = ClockSource.INSTANCE;
+   private static final ClockSource clockSource = ClockSource.INSTANCE; //时钟，提供当前时间和已经过的时间
 
-   private static final int POOL_NORMAL = 0;
-   private static final int POOL_SUSPENDED = 1;
-   private static final int POOL_SHUTDOWN = 2;
+   private static final int POOL_NORMAL = 0; //正常
+   private static final int POOL_SUSPENDED = 1; //中止
+   private static final int POOL_SHUTDOWN = 2; //关闭
 
-   private volatile int poolState;
+   private volatile int poolState; //连接池状态
 
    private final long ALIVE_BYPASS_WINDOW_MS = Long.getLong("com.zaxxer.hikari.aliveBypassWindowMs", MILLISECONDS.toMillis(500));
    private final long HOUSEKEEPING_PERIOD_MS = Long.getLong("com.zaxxer.hikari.housekeeping.periodMs", SECONDS.toMillis(30));
 
    private final PoolEntryCreator POOL_ENTRY_CREATOR = new PoolEntryCreator();
-   private final AtomicInteger totalConnections;
+   private final AtomicInteger totalConnections; //总连接数
    private final ThreadPoolExecutor addConnectionExecutor;
    private final ThreadPoolExecutor closeConnectionExecutor;
    private final ScheduledThreadPoolExecutor houseKeepingExecutorService;
