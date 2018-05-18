@@ -65,7 +65,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
    private static final Logger LOGGER = LoggerFactory.getLogger(ConcurrentBag.class);
 
    private final QueuedSequenceSynchronizer synchronizer; //线程同步器
-   private final CopyOnWriteArrayList<T> sharedList; //所有线程共享的对象存储集合
+   private final CopyOnWriteArrayList<T> sharedList; //所有线程共享的对象存储集合，CopyOnWriteArrayList保证线程安全
    private final boolean weakThreadLocals; //是否使用ThreadLocal弱引用存储借来的对象，否则使用自定义的FastList
 
    private final ThreadLocal<List<Object>> threadList; //本地线程列表
@@ -155,7 +155,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
       // Otherwise, scan the shared list ... for maximum of timeout
       //本地线程变量列表中没有找到可以使用的，从共享列表中查找（因为都是引用，共享列表中的对象可能被其他线程引用，故有"偷"的说法）
       timeout = timeUnit.toNanos(timeout);//转换成毫微秒
-      Future<Boolean> addItemFuture = null;
+      Future<Boolean> addItemFuture = null; //因共享列表对象不足而增加的对象Future
       final long startScan = System.nanoTime();//当前时间毫微秒
       final long originTimeout = timeout; //原始超时时间
       long startSeq;//同步器序列号
@@ -171,9 +171,10 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
                   //遍历如果有可用的对象，返回
                   if (bagEntry.compareAndSet(STATE_NOT_IN_USE, STATE_IN_USE)) {
                      // if we might have stolen another thread's new connection, restart the add...
-                     //上边的注释没看懂要表达什么
                      //如果等待的线程个数超过1个，并且没有因共享列表对象不足而增加过，那么向共享列表中增加一个对象
-                     //addItemFuture对象只有在遍历共享队列中没有找到可用的对象，才会被赋值
+                     //====因为此线程"偷"了其他线程的对象，可能导致其他线程会缺少，需要来共享列表来取，
+                     //这时向共享队列里增加一个新的对象，那么另外等待的线程就可以尽早的获得到对象，（addBagItem（）因为有最大连接数限制，不会超过最大个数）
+                     //====not sure
                      if (waiters.get() > 1 && addItemFuture == null) {
                         listener.addBagItem();
                      }
@@ -185,7 +186,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
             //(每次增加和释放对象都会调用同步器的signal()方法让同步器序列号+1)   
             } while (startSeq < synchronizer.currentSequence()); 
 
-			//共享列表没有可用的对象，并且此次操作没有增加过或者上一个已经增加完成，增加一个对象
+			//共享列表没有可用的对象（并且共享列表中没有增加或者上一此增加操作已经完成）再增加一个对象
             if (addItemFuture == null || addItemFuture.isDone()) {
                addItemFuture = listener.addBagItem();
             }
@@ -232,6 +233,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
     * Add a new object to the bag for others to borrow.
     *
     * @param bagEntry an object to add to the bag
+    * 增加一个新的对象到共享列表中
     */
    public void add(final T bagEntry)
    {
@@ -241,6 +243,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
       }
 
       sharedList.add(bagEntry);
+      //同步器序列号 + 1
       synchronizer.signal();
    }
 
@@ -252,6 +255,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
     * @return true if the entry was removed, false otherwise
     * @throws IllegalStateException if an attempt is made to remove an object
     *         from the bag that was not borrowed or reserved first
+    * 从ConcurrentBag中移除一个STATE_IN_USE（正在使用）和STATE_RESERVED（保留状态）的对象
     */
    public boolean remove(final T bagEntry)
    {
@@ -286,6 +290,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
     *
     * @param state one of the {@link IConcurrentBagEntry} states
     * @return a possibly empty list of objects having the state specified
+    * 返回一个指定状态的ConcurrentBag快照，此方法不会以任何方式加锁或reserve里面的对象，在对这些对象操作之前，你可以对里面的对象执行reserve(T)方法，或者你清楚并发对这些对象的影响
     */
    public List<T> values(final int state)
    {
@@ -306,6 +311,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
     * modifying items, before performing any action on them.
     *
     * @return a possibly empty list of (all) bag items
+    * 返回一个ConcurrentBag快照，此方法不会以任何方式加锁或reserve里面的对象，在对这些对象操作之前，你可以对里面的对象执行reserve(T)方法，或者你清楚并发对这些对象的影响
     */
    @SuppressWarnings("unchecked")
    public List<T> values()
@@ -324,6 +330,9 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
     *
     * @param bagEntry the item to reserve
     * @return true if the item was able to be reserved, false otherwise
+    * 标记对象中的状态 STATE_NOT_IN_USE -> STATE_RESERVED,使得对象不能从ConcurrentBag中“借走”
+    * 此方法主要用在调用values(int)方法时。STATE_RESERVED 状态的对象不能从ConcurrentBag中移除。
+    * STATE_RESERVED 状态的对象可以通过unreserve(T)方法变成可“借”的对象
     */
    public boolean reserve(final T bagEntry)
    {
@@ -335,6 +344,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
     * available again for borrowing.
     *
     * @param bagEntry the item to unreserve
+    * 讲对象的状态由 STATE_RESERVED -> STATE_NOT_IN_USE
     */
    public void unreserve(final T bagEntry)
    {
@@ -351,6 +361,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
     * bag to become available.
     *
     * @return the number of threads waiting for items from the bag
+    * 获取有多少个线程正在阻塞中（等待对象分配中） 同步器 waitUntilSequenceExceeded()方法会操作AQS的pending Queue
     */
    public int getPendingQueue()
    {
@@ -362,6 +373,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
     *
     * @param state the state of the items to count
     * @return a count of how many items in the bag are in the specified state
+    * 共享列表中某个状态的对象的个数
     */
    public int getCount(final int state)
    {
@@ -378,12 +390,13 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
     * Get the total number of items in the bag.
     *
     * @return the number of items in the bag
+    * 共享列表内对象个数
     */
    public int size()
    {
       return sharedList.size();
    }
-
+   //打印所有对象状态
    public void dumpState()
    {
       for (T bagEntry : sharedList) {
