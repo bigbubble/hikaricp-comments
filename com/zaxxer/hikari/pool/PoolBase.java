@@ -102,7 +102,8 @@ abstract class PoolBase
    // ***********************************************************************
    //                           JDBC methods
    // ***********************************************************************
-
+   
+   //关闭数据库连接，不抛出异常
    void quietlyCloseConnection(final Connection connection, final String closureReason)
    {
       if (connection != null) {
@@ -121,6 +122,7 @@ abstract class PoolBase
       }
    }
 
+   //验证连接是否能连接到数据库
    boolean isConnectionAlive(final Connection connection)
    {
       try {
@@ -167,15 +169,17 @@ abstract class PoolBase
    //                         PoolEntry methods
    // ***********************************************************************
 
+   //创建新的PoolEntry
    PoolEntry newPoolEntry() throws Exception
    {
       return new PoolEntry(newConnection(), this, isReadOnly, isAutoCommit);
    }
 
+   //重设数据库连接属性
    void resetConnectionState(final Connection connection, final ProxyConnection proxyConnection, final int dirtyBits) throws SQLException
    {
       int resetBits = 0;
-
+      //只读
       if ((dirtyBits & DIRTY_BIT_READONLY) != 0 && proxyConnection.getReadOnlyState() != isReadOnly) {
          connection.setReadOnly(isReadOnly);
          resetBits |= DIRTY_BIT_READONLY;
@@ -206,6 +210,7 @@ abstract class PoolBase
       }
    }
 
+   //关闭连接超时执行线程池
    void shutdownNetworkTimeoutExecutor()
    {
       if (netTimeoutExecutor instanceof ThreadPoolExecutor) {
@@ -221,6 +226,7 @@ abstract class PoolBase
     * Register MBeans for HikariConfig and HikariPool.
     *
     * @param pool a HikariPool instance
+	* 注册MXBean
     */
    void registerMBeans(final HikariPool hikariPool)
    {
@@ -248,6 +254,7 @@ abstract class PoolBase
 
    /**
     * Unregister MBeans for HikariConfig and HikariPool.
+	* 注销MXBean
     */
    void unregisterMBeans()
    {
@@ -278,6 +285,7 @@ abstract class PoolBase
     * Create/initialize the underlying DataSource.
     *
     * @return a DataSource instance
+	* 根据配置初始化DataSource
     */
    private void initializeDataSource()
    {
@@ -294,17 +302,19 @@ abstract class PoolBase
          PropertyElf.setTargetFromProperties(dataSource, dataSourceProperties);
       }
       else if (jdbcUrl != null && dataSource == null) {
+         //spring 走这里
          dataSource = new DriverDataSource(jdbcUrl, driverClassName, dataSourceProperties, username, password);
       }
 
       if (dataSource != null) {
-         setLoginTimeout(dataSource, connectionTimeout);
-         createNetworkTimeoutExecutor(dataSource, dsClassName, jdbcUrl);
+         setLoginTimeout(dataSource, connectionTimeout); //设置超时时间
+         createNetworkTimeoutExecutor(dataSource, dsClassName, jdbcUrl); //网络超时执行器
       }
 
       this.dataSource = dataSource;
    }
 
+   //获取数据库连接
    Connection newConnection() throws Exception
    {
       Connection connection = null;
@@ -329,6 +339,7 @@ abstract class PoolBase
     *
     * @param connection a Connection
     * @throws SQLException thrown from driver
+	* 设置连接初始状态
     */
    private void setupConnection(final Connection connection) throws SQLException
    {
@@ -361,6 +372,7 @@ abstract class PoolBase
     * Execute isValid() or connection test query.
     *
     * @param connection a Connection to check
+	* 测试连接是否可用
     */
    private void checkDriverSupport(final Connection connection) throws SQLException
    {
@@ -398,6 +410,7 @@ abstract class PoolBase
     *
     * @param statement a statement to set the query timeout on
     * @param timeoutSec the number of seconds before timeout
+	* 如果驱动支持，设置sql语句执行超时时间
     */
    private void setQueryTimeout(final Statement statement, final int timeoutSec)
    {
@@ -422,6 +435,7 @@ abstract class PoolBase
     * @param connection the connection to set the network timeout on
     * @param timeoutMs the number of milliseconds before timeout
     * @return the pre-existing network timeout value
+	* 如果配置了isUseNetworkTimeout=true并且驱动支持，设置网络超时时间
     */
    private int getAndSetNetworkTimeout(final Connection connection, final long timeoutMs)
    {
@@ -457,6 +471,7 @@ abstract class PoolBase
     * @param connection the connection to set the network timeout on
     * @param timeoutMs the number of milliseconds before timeout
     * @throws SQLException throw if the connection.setNetworkTimeout() call throws
+	* 如果配置了isUseNetworkTimeout=true并且驱动支持，设置网络超时时间
     */
    private void setNetworkTimeout(final Connection connection, final long timeoutMs) throws SQLException
    {
@@ -472,12 +487,14 @@ abstract class PoolBase
     * @param sql the SQL to execute
     * @param isCommit whether to commit the SQL after execution or not
     * @throws SQLException throws if the init SQL execution fails
+	* 执行sql
     */
    private void executeSql(final Connection connection, final String sql, final boolean isCommit) throws SQLException
    {
       if (sql != null) {
          try (Statement statement = connection.createStatement()) {
             // connection was created a few milliseconds before, so set query timeout is omitted (we assume it will succeed)
+			//连接是在几毫秒之前创建的，所以忽略 set query超时（我们假设它会成功）
             statement.execute(sql);
          }
 
@@ -492,6 +509,7 @@ abstract class PoolBase
       }
    }
 
+   //创建网络超时执行线程池，mysql使用了一个特殊的执行器
    private void createNetworkTimeoutExecutor(final DataSource dataSource, final String dsClassName, final String jdbcUrl)
    {
       // Temporary hack for MySQL issue: http://bugs.mysql.com/bug.php?id=75615
@@ -515,11 +533,13 @@ abstract class PoolBase
     *
     * @param dataSource the DataSource
     * @param connectionTimeout the timeout in milliseconds
+	* 为特定的数据源设置登录超时时间
     */
    private void setLoginTimeout(final DataSource dataSource, final long connectionTimeout)
    {
       if (connectionTimeout != Integer.MAX_VALUE) {
          try {
+            //最小1秒
             dataSource.setLoginTimeout((int) MILLISECONDS.toSeconds(Math.max(1000L, connectionTimeout)));
          }
          catch (Throwable e) {
@@ -558,6 +578,7 @@ abstract class PoolBase
    /**
     * Special executor used only to work around a MySQL issue that has not been addressed.
     * MySQL issue: http://bugs.mysql.com/bug.php?id=75615
+	* Mysql的网络超时执行器
     */
    private static class SynchronousExecutor implements Executor
    {

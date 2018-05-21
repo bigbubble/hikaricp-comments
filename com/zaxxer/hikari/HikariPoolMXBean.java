@@ -31,12 +31,12 @@ public interface HikariPoolMXBean
    int getActiveConnections();
    //获取总连接数
    int getTotalConnections();
-
+   //等待获取数据库连接的线程数
    int getThreadsAwaitingConnection();
-
+   //将concurrentBag中所有是“未使用”的对象，从concurrentBag中移除并加入到关闭连接的线程池中，并标记所有对象“待清除”为true,
    void softEvictConnections();
-
+   //中止
    void suspendPool();
-
+   //恢复
    void resumePool();
 }

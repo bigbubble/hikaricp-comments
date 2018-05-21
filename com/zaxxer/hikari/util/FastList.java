@@ -33,6 +33,7 @@ import java.util.function.UnaryOperator;
  * Fast list without range checking.
  *
  * @author Brett Wooldridge
+ * 没有范围检查的List，重写了ArrayList中的一些方法，提高效率
  */
 public final class FastList<T> extends ArrayList<T>
 {
