@@ -66,7 +66,8 @@ public class HikariConfig implements HikariConfigMXBean
    private volatile long validationTimeout;
    //连接空闲时间
    private volatile long idleTimeout;
-   //在有记录表明可能有连接溢出之前，连接可以退出池的时间
+   //连接被占用的超时时间，单位毫秒，默认为0，即禁用连接泄露检测。这个功能相当于tomcat jdbc pool的poolCleaner里头的checkAbandoned。
+   //如果大于0且不是单元测试，则进一步判断：(leakDetectionThreshold < SECONDS.toMillis(2) or (leakDetectionThreshold > maxLifetime && maxLifetime > 0)，会被重置为0 .
    private volatile long leakDetectionThreshold;
    //连接最大存活时间
    private volatile long maxLifetime;
@@ -819,7 +820,7 @@ public class HikariConfig implements HikariConfigMXBean
          LOGGER.warn("{} - idleTimeout is less than 10000ms, setting to default {}ms.", poolName, IDLE_TIMEOUT);
          idleTimeout = IDLE_TIMEOUT;
       }
-
+      //如果大于0且不是单元测试，则进一步判断：(leakDetectionThreshold < SECONDS.toMillis(2) or (leakDetectionThreshold > maxLifetime && maxLifetime > 0)，会被重置为0 .
       if (leakDetectionThreshold > 0 && !unitTest) {
          if (leakDetectionThreshold < SECONDS.toMillis(2) || (leakDetectionThreshold > maxLifetime && maxLifetime > 0)) {
             LOGGER.warn("{} - leakDetectionThreshold is less than 2000ms or more than maxLifetime, disabling it.", poolName);

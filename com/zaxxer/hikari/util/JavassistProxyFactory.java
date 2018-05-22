@@ -49,7 +49,9 @@ import javassist.bytecode.ClassFile;
  * {@link PreparedStatement}, and {@link CallableStatement}.  Additionally it injects
  * method bodies into the {@link ProxyFactory} class methods that can instantiate
  * instances of the generated proxies.
- *
+ * 
+ * 生成 Connection，Statement，PreparedStatement，CallableStatement的代理类；额外修改了ProxyFactory类中的方法的方法体，来生成具体代理类
+ * 在HikariProxy***.class的代理类中没有其他的操作，都是调用super.delegate.methodXXX(),包裹了try ... catch(SQLException) throw checkException()
  * @author Brett Wooldridge
  */
 public final class JavassistProxyFactory

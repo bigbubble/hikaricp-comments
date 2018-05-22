@@ -175,7 +175,7 @@ abstract class PoolBase
       return new PoolEntry(newConnection(), this, isReadOnly, isAutoCommit);
    }
 
-   //重设数据库连接属性
+   //连接原始值，在连接使用过程中被修改，重置数据库连接的初始值
    void resetConnectionState(final Connection connection, final ProxyConnection proxyConnection, final int dirtyBits) throws SQLException
    {
       int resetBits = 0;

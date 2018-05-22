@@ -25,6 +25,7 @@ import java.sql.Wrapper;
  * This is the proxy class for java.sql.ResultSet.
  *
  * @author Brett Wooldridge
+ * java.sql.ResultSet 的代理类，实际使用代理类的父类
  */
 public abstract class ProxyResultSet implements ResultSet
 {

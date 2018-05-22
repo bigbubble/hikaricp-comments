@@ -42,7 +42,7 @@ final class PoolEntry implements IConcurrentBagEntry
    static final Comparator<PoolEntry> LASTACCESS_COMPARABLE;
 
    Connection connection; //具体连接
-   long lastAccessed; //最近一次连接数据库的时间
+   long lastAccessed; //最近一次结束连接数据库的时间
    long lastBorrowed; //最近被“借”的时间
    private volatile boolean evict; //是否被标记“待清理”
 
@@ -91,7 +91,7 @@ final class PoolEntry implements IConcurrentBagEntry
 
    /**
     * @param endOfLife
-	* 设置连接 超过最大生存时间的Future对象
+	* 设置连接 超过最大生存时间处理结果的Future对象
     */
    void setFutureEol(final ScheduledFuture<?> endOfLife)
    {
@@ -104,7 +104,7 @@ final class PoolEntry implements IConcurrentBagEntry
       return ProxyFactory.getProxyConnection(this, connection, openStatements, leakTask, now, isReadOnly, isAutoCommit);
    }
 
-   //重设连接状态
+   //上次使用可能(根据dirtyBits判断)被更改过，重设连接状态，一边下次使用
    void resetConnectionState(final ProxyConnection proxyConnection, final int dirtyBits) throws SQLException
    {
       hikariPool.resetConnectionState(connection, proxyConnection, dirtyBits);
@@ -172,7 +172,7 @@ final class PoolEntry implements IConcurrentBagEntry
    {
       state.lazySet(update);
    }
-   //关闭连接（并没有关闭Connection连接,返回处理）
+   //关闭PoolEntry,清理引用，返回Connection（并没有关闭Connection连接,返回处理）
    Connection close()
    {
       ScheduledFuture<?> eol = endOfLife;

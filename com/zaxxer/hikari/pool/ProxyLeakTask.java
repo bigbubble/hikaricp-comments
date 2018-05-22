@@ -28,6 +28,8 @@ import org.slf4j.LoggerFactory;
  * cancelled if the connection is closed before the leak time expires.
  *
  * @author Brett Wooldridge
+ * 定时调度器，报告连接泄漏，如果连接在过期超时之前关闭，将会被取消
+ * 在HikariPool.getConnection()方法中绑定任务
  */
 class ProxyLeakTask implements Runnable
 {
@@ -76,6 +78,7 @@ class ProxyLeakTask implements Runnable
    }
 
    /** {@inheritDoc} */
+   //如果超时，将打印excption信息
    @Override
    public void run()
    {
@@ -84,6 +87,7 @@ class ProxyLeakTask implements Runnable
       System.arraycopy(stackTrace, 5, trace, 0, trace.length);
 
       exception.setStackTrace(trace);
+	  //在此抛出异常，并不影响主线程，主线程在泄漏检测抛出异常后，仍旧继续执行，最后输出结果。
       LOGGER.warn("Connection leak detection triggered for {}, stack trace follows", connectionName, exception);
    }
 

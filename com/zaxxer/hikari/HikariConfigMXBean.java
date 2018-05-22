@@ -101,7 +101,7 @@ public interface HikariConfigMXBean
     *
     * @return the connection leak detection threshold in milliseconds
     * 
-    * 在有记录表明可能有连接溢出之前，连接可以退出池的时间
+    * 连接被占用的超时时间，单位毫秒，默认为0，即禁用连接泄露检测。这个功能相当于tomcat jdbc pool的poolCleaner里头的checkAbandoned。
     * 0表示禁用连接溢出检测
     */
    long getLeakDetectionThreshold();
@@ -111,7 +111,7 @@ public interface HikariConfigMXBean
     * logged indicating a possible connection leak. A value of 0 means leak detection is disabled.
     *
     * @param leakDetectionThresholdMs the connection leak detection threshold in milliseconds
-    * 设置 在有记录表明可能有连接溢出之前，连接可以退出池的时间
+    * 设置 连接被占用的超时时间，单位毫秒，默认为0，即禁用连接泄露检测。这个功能相当于tomcat jdbc pool的poolCleaner里头的checkAbandoned。
     */
    void setLeakDetectionThreshold(long leakDetectionThresholdMs);
 
@@ -146,6 +146,7 @@ public interface HikariConfigMXBean
     *
     * @return the minimum number of connections in the pool
     * 源码注释错误 ？
+	* 连接池最小空闲连接数
     */
    int getMinimumIdle();
 

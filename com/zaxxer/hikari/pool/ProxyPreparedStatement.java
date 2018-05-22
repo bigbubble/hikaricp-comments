@@ -24,6 +24,7 @@ import java.sql.SQLException;
  * This is the proxy class for java.sql.PreparedStatement.
  *
  * @author Brett Wooldridge
+ * java.sql.PreparedStatement 的代理类，实际使用的父类
  */
 public abstract class ProxyPreparedStatement extends ProxyStatement implements PreparedStatement
 {

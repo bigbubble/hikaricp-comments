@@ -68,7 +68,7 @@ public class HikariPool extends PoolBase implements HikariPoolMXBean, IBagStateL
 {
    private final Logger LOGGER = LoggerFactory.getLogger(HikariPool.class);
 
-   private static final ClockSource clockSource = ClockSource.INSTANCE; //时钟，提供当前时间和已经过的时间
+   private static final ClockSource clockSource = ClockSource.INSTANCE; //时钟，时间计算
 
    private static final int POOL_NORMAL = 0; //正常
    private static final int POOL_SUSPENDED = 1; //中止
@@ -163,7 +163,7 @@ public class HikariPool extends PoolBase implements HikariPoolMXBean, IBagStateL
     */
    public final Connection getConnection(final long hardTimeout) throws SQLException
    {
-      //加锁
+      //控制并发线程数，最大10000，请求一个许可
       suspendResumeLock.acquire();
 	  //开始时间
       final long startTime = clockSource.currentTime();
@@ -188,6 +188,7 @@ public class HikariPool extends PoolBase implements HikariPoolMXBean, IBagStateL
                //统计信息
                metricsTracker.recordBorrowStats(poolEntry, startTime);
 			   //返回数据库连接，使用代理类包装，同时将此连接加入到溢出检测定时任务中
+			   //使用代理类，重写了Connection方法，如在外部使用close()方法时，会同时处理PoolEntry对象中的信息
                return poolEntry.createProxyConnection(leakTask.schedule(poolEntry), now);
             }
          } while (timeout > 0L);
@@ -196,7 +197,7 @@ public class HikariPool extends PoolBase implements HikariPoolMXBean, IBagStateL
          throw new SQLException(poolName + " - Interrupted during connection acquisition", e);
       }
       finally {
-         //释放锁
+         //控制并发线程数，最大10000，释放一个许可
          suspendResumeLock.release();
       }
      
@@ -382,6 +383,7 @@ public class HikariPool extends PoolBase implements HikariPoolMXBean, IBagStateL
    public final synchronized void suspendPool()
    {
       if (suspendResumeLock == SuspendResumeLock.FAUX_LOCK) {
+         //如果没有配置 “允许中止”(config.isAllowPoolSuspension=true) 调用此方法，抛出异常
          throw new IllegalStateException(poolName + " - is not suspendable");
       }
       else if (poolState != POOL_SUSPENDED) {

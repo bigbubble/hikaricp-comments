@@ -26,6 +26,7 @@ import java.sql.Wrapper;
  * This is the proxy class for java.sql.Statement.
  *
  * @author Brett Wooldridge
+ * java.sql.Statement的代理类，ProxyPreparadStatement,ProxyCallableStatement都继承此类
  */
 public abstract class ProxyStatement implements Statement
 {
@@ -65,14 +66,17 @@ public abstract class ProxyStatement implements Statement
    @Override
    public final void close() throws SQLException
    {
+	  //关闭，后续版本此处加了sychronize 防止重复关闭
       if (isClosed) {
          return;
       }
 
       isClosed = true;
+	  //从Statement集合中删除,问题：此时移除什么时候执行真的close()呢
       connection.untrackStatement(delegate);
 
       try {
+		 //关闭连接，此时会关闭所有的statement
          delegate.close();
       }
       catch (SQLException e) {
@@ -107,9 +111,9 @@ public abstract class ProxyStatement implements Statement
    @Override
    public ResultSet executeQuery(String sql) throws SQLException
    {
-      connection.markCommitStateDirty();
-      ResultSet resultSet = delegate.executeQuery(sql);
-      return ProxyFactory.getProxyResultSet(connection, this, resultSet);
+      connection.markCommitStateDirty();//统计
+      ResultSet resultSet = delegate.executeQuery(sql);//执行
+      return ProxyFactory.getProxyResultSet(connection, this, resultSet);//返回代理ResultSet
    }
 
    /** {@inheritDoc} */

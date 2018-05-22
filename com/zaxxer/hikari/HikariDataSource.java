@@ -277,7 +277,7 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
     * Suspend allocation of connections from the pool.  All callers to <code>getConnection()</code>
     * will block indefinitely until <code>resumePool()</code> is called.
     * 
-    * 中止从连接池中分配连接，所有调用getConnection()方法会被阻塞，知道resumePool()方法被调用
+    * 中止从连接池中分配连接，所有调用getConnection()方法会被阻塞，直到resumePool()方法被调用
     */
    public void suspendPool()
    {

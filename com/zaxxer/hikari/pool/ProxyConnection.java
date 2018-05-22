@@ -40,6 +40,7 @@ import com.zaxxer.hikari.util.FastList;
  * This is the proxy class for java.sql.Connection.
  *
  * @author Brett Wooldridge
+ * 连接池中获取到Connection的代理类  此类和同级别的Proxy开头的类作为最终的代理类的父类，方法中没有try..catch() throw，只是声明了抛出SQL异常，方法体没有异常检查代码 
  */
 public abstract class ProxyConnection implements Connection
 {
@@ -53,14 +54,14 @@ public abstract class ProxyConnection implements Connection
    private static final Set<String> SQL_ERRORS;
    private static final ClockSource clockSource;
 
-   protected Connection delegate;
+   protected Connection delegate; //被代理的数据库连接
 
-   private final PoolEntry poolEntry;
-   private final ProxyLeakTask leakTask;
-   private final FastList<Statement> openStatements;
+   private final PoolEntry poolEntry;  //PoolEntry
+   private final ProxyLeakTask leakTask; //泄漏检测
+   private final FastList<Statement> openStatements; // 执行的语句
 
-   private int dirtyBits;
-   private long lastAccess;
+   private int dirtyBits; //
+   private long lastAccess; // 上次结束与数据库联系的时间
    private boolean isCommitStateDirty;
 
    private boolean isReadOnly;
@@ -141,14 +142,17 @@ public abstract class ProxyConnection implements Connection
       return poolEntry;
    }
 
+   //异常检查
    final SQLException checkException(final SQLException sqle)
    {
       final String sqlState = sqle.getSQLState();
+	  //被检查的数据库连接不是“已关闭的数据库连接”
       if (sqlState != null && delegate != ClosedConnection.CLOSED_CONNECTION) {
-         if (sqlState.startsWith("08") || SQL_ERRORS.contains(sqlState)) { // broken connection
+         if (sqlState.startsWith("08") || SQL_ERRORS.contains(sqlState)) { // broken connection 连接损坏
             LOGGER.warn("{} - Connection {} marked as broken because of SQLSTATE({}), ErrorCode({})",
                         poolEntry.getPoolName(), delegate, sqlState, sqle.getErrorCode(), sqle);
             leakTask.cancel();
+			//清理掉连接
             poolEntry.evict("(connection is broken)");
             delegate = ClosedConnection.CLOSED_CONNECTION;
          }
@@ -182,6 +186,7 @@ public abstract class ProxyConnection implements Connection
       leakTask.cancel();
    }
 
+   //由代理对象统一管理Statement，关闭连接时统一对openStatements里的对象close()
    private final synchronized <T extends Statement> T trackStatement(final T statement)
    {
       openStatements.add(statement);
@@ -189,6 +194,7 @@ public abstract class ProxyConnection implements Connection
       return statement;
    }
 
+   //关闭Statement对象
    private final void closeStatements()
    {
       final int size = openStatements.size();
@@ -216,27 +222,34 @@ public abstract class ProxyConnection implements Connection
    // **********************************************************************
 
    /** {@inheritDoc} */
+   //重写close()方法，因为要在连接池中复用，不能真的关闭连接
    @Override
    public final void close() throws SQLException
    {
       // Closing statements can cause connection eviction, so this must run before the conditional below
+	  //关闭Statement对象可能导致连接关闭清除，先执行
       closeStatements();
 
       if (delegate != ClosedConnection.CLOSED_CONNECTION) {
          leakTask.cancel();
 
          try {
+            //不是自动提交，提交状态被修改，不是只读
             if (isCommitStateDirty && !isAutoCommit && !isReadOnly) {
+               //回滚
                delegate.rollback();
+			   //更新与数据库最后联系时间
                lastAccess = clockSource.currentTime();
                LOGGER.debug("{} - Executed rollback on connection {} due to dirty commit state on close().", poolEntry.getPoolName(), delegate);
             }
 
             if (dirtyBits != 0) {
+               //连接原始值，在连接使用过程中被修改，重置数据库连接的初始值
                poolEntry.resetConnectionState(this, dirtyBits);
+			   //更新与数据库最后联系时间
                lastAccess = clockSource.currentTime();
             }
-
+            //清除警告信息
             delegate.clearWarnings();
          }
          catch (SQLException e) {
@@ -246,12 +259,14 @@ public abstract class ProxyConnection implements Connection
             }
          }
          finally {
+            //设置代理类为 “已关闭的连接” (PoolEntry中的connection对象的引用没有变化，使用代理类方法将会看到ClosedConnection.CLOSED_CONNECTION类的表现)
             delegate = ClosedConnection.CLOSED_CONNECTION;
+			//释放PoolEntry到连接池中
             poolEntry.recycle(lastAccess);
          }
       }
    }
-
+   //以下是对其他方法的重写，修改statement获取、isClose()、状态修改相关的方法和数据变更：
    /** {@inheritDoc} */
    @Override
    public boolean isClosed() throws SQLException
@@ -442,6 +457,8 @@ public abstract class ProxyConnection implements Connection
    //                         Private classes
    // **********************************************************************
 
+   //获取一个固定对象代表“已关闭”的Connection，使用JDK代理修改abort,isValid,toString方法快速返回，其他都抛异常
+   //所有的代理对象关闭后的delegate代理都使用CLOSED_CONNECTION这个固定的引用，为连接关闭后外界代理连接的引用调用提供处理，同时唯一类减少了内存消耗和比对代价
    private static final class ClosedConnection
    {
       static final Connection CLOSED_CONNECTION = getClosedConnection();

@@ -69,6 +69,7 @@ import com.zaxxer.hikari.util.FastList;
  *   return new HikariProxyResultSet(paramProxyConnection, paramProxyStatement, paramResultSet);
  *  }
  * }
+ * 在HikariProxy***.class的代理类中没有其他的操作，都是调用super.delegate.methodXXX(),包裹了try ... catch() throw SQLException
  */
 public final class ProxyFactory
 {
